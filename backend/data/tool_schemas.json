@@ -1,0 +1,59 @@
+{
+  "tools": [
+    {
+      "name": "get_customer_profile",
+      "permission": "READ",
+      "input": {
+        "application_id": "string"
+      }
+    },
+    {
+      "name": "request_document",
+      "permission": "CUSTOMER_COMMUNICATION",
+      "input": {
+        "application_id": "string",
+        "document_type": "string",
+        "reason": "string"
+      }
+    },
+    {
+      "name": "run_credit_model",
+      "permission": "MODEL_EXECUTION",
+      "input": {
+        "application_id": "string"
+      }
+    },
+    {
+      "name": "run_fraud_check",
+      "permission": "MODEL_EXECUTION",
+      "input": {
+        "application_id": "string"
+      }
+    },
+    {
+      "name": "evaluate_policy",
+      "permission": "POLICY_READ",
+      "input": {
+        "application_id": "string",
+        "policy_version": "string"
+      }
+    },
+    {
+      "name": "create_human_review",
+      "permission": "WORKFLOW_WRITE",
+      "input": {
+        "application_id": "string",
+        "reason": "string"
+      }
+    },
+    {
+      "name": "generate_offer",
+      "permission": "OFFER_WRITE",
+      "input": {
+        "application_id": "string",
+        "amount": "number",
+        "tenure_months": "integer"
+      }
+    }
+  ]
+}

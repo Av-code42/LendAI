@@ -1,0 +1,76 @@
+{
+  "credit": {
+    "best_algorithm": "LOGISTIC_REGRESSION",
+    "version": "credit-ml-v1",
+    "n_samples": 10000,
+    "results": {
+      "LOGISTIC_REGRESSION": {
+        "algorithm": "LOGISTIC_REGRESSION",
+        "pr_auc": 0.12229830186805624,
+        "precision_at_threshold": 0.08211143695014662,
+        "recall_at_threshold": 0.7304347826086957,
+        "false_positive_rate": 0.32547660311958404,
+        "false_negative_rate": 0.26956521739130435,
+        "positive_rate_in_test": 0.03833333333333333,
+        "n_test": 3000
+      },
+      "RANDOM_FOREST": {
+        "algorithm": "RANDOM_FOREST",
+        "pr_auc": 0.0951795017809343,
+        "precision_at_threshold": 0.10037174721189591,
+        "recall_at_threshold": 0.23478260869565218,
+        "false_positive_rate": 0.08388214904679377,
+        "false_negative_rate": 0.7652173913043478,
+        "positive_rate_in_test": 0.03833333333333333,
+        "n_test": 3000
+      },
+      "XGBOOST": {
+        "algorithm": "XGBOOST",
+        "pr_auc": 0.0819357858895029,
+        "precision_at_threshold": 0.08757062146892655,
+        "recall_at_threshold": 0.26956521739130435,
+        "false_positive_rate": 0.1119584055459272,
+        "false_negative_rate": 0.7304347826086957,
+        "positive_rate_in_test": 0.03833333333333333,
+        "n_test": 3000
+      }
+    }
+  },
+  "fraud": {
+    "best_algorithm": "LOGISTIC_REGRESSION",
+    "version": "fraud-ml-v1",
+    "n_samples": 10000,
+    "results": {
+      "LOGISTIC_REGRESSION": {
+        "algorithm": "LOGISTIC_REGRESSION",
+        "pr_auc": 1.0,
+        "precision_at_threshold": 0.9538461538461539,
+        "recall_at_threshold": 1.0,
+        "false_positive_rate": 0.0010211027910142954,
+        "false_negative_rate": 0.0,
+        "positive_rate_in_test": 0.020666666666666667,
+        "n_test": 3000
+      },
+      "RANDOM_FOREST": {
+        "algorithm": "RANDOM_FOREST",
+        "pr_auc": 0.9987963408762639,
+        "precision_at_threshold": 1.0,
+        "recall_at_threshold": 0.9193548387096774,
+        "false_positive_rate": 0.0,
+        "false_negative_rate": 0.08064516129032258,
+        "positive_rate_in_test": 0.020666666666666667,
+        "n_test": 3000
+      },
+      "XGBOOST": {
+        "algorithm": "XGBOOST",
+        "pr_auc": 0.9918075433718292,
+        "precision_at_threshold": 1.0,
+        "recall_at_threshold": 0.967741935483871,
+        "false_positive_rate": 0.0,
+        "false_negative_rate": 0.03225806451612903,
+        "positive_rate_in_test": 0.020666666666666667,
+        "n_test": 3000
+      }
+    }
+  }
+}
