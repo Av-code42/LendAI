@@ -81,7 +81,9 @@ export interface ModelOutput {
   id: string;
   applicationId: string;
   modelType: "CREDIT" | "FRAUD";
-  modelName: "LOGISTIC_REGRESSION" | "RANDOM_FOREST" | "XGBOOST";
+  // "HISTORICAL" for bulk-imported dataset rows scored before this
+  // system existed; otherwise the winning algorithm from training.
+  modelName: "LOGISTIC_REGRESSION" | "RANDOM_FOREST" | "XGBOOST" | "HISTORICAL";
   modelVersion: string;
   score: number; // 0-1 probability of adverse outcome (default / fraud)
   riskLevel: RiskLevel;
@@ -107,12 +109,9 @@ export interface PolicyResult {
   evaluatedAt: string;
 }
 
-export type DocumentType =
-  | "PAN_CARD"
-  | "AADHAAR"
-  | "SALARY_SLIP"
-  | "BANK_STATEMENT"
-  | "SELFIE";
+// The 3 document types the real dataset/backend actually has -- no
+// AADHAAR/SELFIE (those were assumed before the real backend existed).
+export type DocumentType = "PAN" | "SALARY_SLIP" | "BANK_STATEMENT";
 
 export type DocumentStatus =
   | "UPLOADED"

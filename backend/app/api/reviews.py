@@ -40,7 +40,9 @@ def _out(case: m.HumanReviewCase) -> HumanReviewCaseOut:
         "decision_action": case.decision_action,
         "decision_reason_code": case.decision_reason_code,
         "decision_comment": case.decision_comment,
+        "decided_by_user_id": case.decided_by_user_id,
         "decided_by_user_name": case.decided_by_user_name,
+        "modified_offer_amount": case.modified_offer_amount,
         "decided_at": case.decided_at,
         "created_at": case.created_at,
     }
