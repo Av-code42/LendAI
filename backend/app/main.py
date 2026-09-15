@@ -14,7 +14,12 @@ app = FastAPI(title="LendAI API", version="0.1.0")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_allow_origins,
-    allow_credentials=True,
+    # No cookies/session credentials are used anywhere in this API (no
+    # auth yet), and allow_credentials=True is invalid per the CORS spec
+    # when combined with a wildcard origin -- browsers reject that
+    # combination outright, so this must stay False as long as
+    # cors_allow_origins defaults to ["*"].
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )

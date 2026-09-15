@@ -159,7 +159,9 @@ class HumanReviewCaseOut(ORMModel):
     decision_action: str | None
     decision_reason_code: str | None
     decision_comment: str | None
+    decided_by_user_id: str | None
     decided_by_user_name: str | None
+    modified_offer_amount: float | None
     decided_at: datetime | None
     created_at: datetime
 
