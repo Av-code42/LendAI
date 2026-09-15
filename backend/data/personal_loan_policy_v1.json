@@ -1,0 +1,50 @@
+{
+  "policy_id": "PL_2026_V1",
+  "product": "PERSONAL_LOAN",
+  "version": "1.0",
+  "rules": [
+    {
+      "id": "AGE",
+      "field": "age",
+      "operator": "BETWEEN",
+      "value": [
+        21,
+        60
+      ]
+    },
+    {
+      "id": "MIN_INCOME",
+      "field": "monthly_income",
+      "operator": ">=",
+      "value": 50000
+    },
+    {
+      "id": "BUREAU_SCORE",
+      "field": "bureau_score",
+      "operator": ">=",
+      "value": 700
+    },
+    {
+      "id": "FOIR",
+      "field": "foir",
+      "operator": "<=",
+      "value": 0.5
+    },
+    {
+      "id": "EMPLOYMENT_TENURE",
+      "field": "employment_tenure_months",
+      "operator": ">=",
+      "value": 6
+    },
+    {
+      "id": "LOAN_TO_INCOME",
+      "field": "requested_amount",
+      "operator": "<=",
+      "expression": "monthly_income * 8"
+    }
+  ],
+  "fraud_override": {
+    "HIGH": "HUMAN_REVIEW",
+    "MEDIUM": "HUMAN_REVIEW"
+  }
+}

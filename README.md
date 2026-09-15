@@ -3,8 +3,7 @@
 Agentic digital lending & underwriting MVP — an end-to-end personal-loan
 workflow where an AI agent orchestrates evidence collection and tools,
 while deterministic ML/policy/routing layers govern every consequential
-decision. See `frontend/PRD.md`-equivalent context in the project bundle
-for the full product spec.
+decision.
 
 **Core rule:** LLM → structured action → schema validation → permission
 validation → tool/model/policy → deterministic router → human or
@@ -19,23 +18,33 @@ decision-maker and never writes to the database directly.
 
 - `frontend/` — the customer-facing loan application flow and the
   underwriter human-review console (React + TypeScript + Vite +
-  Tailwind), currently backed by an in-browser mock API layer standing in
-  for the real backend. See `frontend/README.md` for setup.
-- Backend, ML services, and infra are not yet built — this repo currently
-  covers the frontend milestone only, built against the API surface the
-  real backend will implement next (see `frontend/src/mocks/handlers.ts`
-  for the exact contract).
+  Tailwind), currently backed by an in-browser mock API layer. See
+  `frontend/README.md`.
+- `backend/` — Python/FastAPI backend: Postgres schema + data loader for
+  the real 10,000-row dataset bundle, the state machine, the policy
+  engine (validated 10,000/10,000 against ground truth), trained credit
+  and fraud ML models (Logistic Regression / Random Forest / XGBoost
+  compared), the deterministic decision router (validated 99.3% against
+  ground truth), the agent tool/permission layer, and the full REST API.
+  See `backend/README.md` for setup, architecture, and known limitations.
+- Frontend↔backend wiring, real OCR, real device/fraud signal capture,
+  auth/RBAC, and an actual LLM in the agent loop are not yet built.
 
 ## Recommended build order
 
-1. Load data into PostgreSQL.
-2. Implement the application state machine.
-3. Implement the policy engine from the JSON policy.
-4. Train/evaluate credit and fraud ML models.
-5. Expose model scoring behind internal APIs.
-6. Implement agent tool contracts and action validation.
-7. Implement deterministic decision routing.
-8. **Build the customer & human-review UI. ← current milestone**
-9. Add audit/event logging.
-10. Add mock offer/agreement/disbursal.
-11. Run golden and adversarial test cases.
+1. ~~Load data into PostgreSQL.~~ ✅
+2. ~~Implement the application state machine.~~ ✅
+3. ~~Implement the policy engine from the JSON policy.~~ ✅
+4. ~~Train/evaluate credit and fraud ML models.~~ ✅
+5. ~~Expose model scoring behind internal APIs.~~ ✅
+6. ~~Implement agent tool contracts and action validation.~~ ✅
+7. ~~Implement deterministic decision routing.~~ ✅
+8. ~~Build the customer & human-review UI.~~ ✅
+9. ~~Add audit/event logging.~~ ✅
+10. ~~Add mock offer/agreement/disbursal.~~ ✅
+11. ~~Run golden and adversarial test cases.~~ ✅ (`backend/tests/`)
+
+**Next up:** wire the frontend to the real backend (currently the
+frontend runs its own mock API layer independently); swap the
+deterministic agent orchestrator for a real LLM-driven one against the
+same tool contract and guardrails.

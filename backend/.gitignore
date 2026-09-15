@@ -1,0 +1,14 @@
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+*.tsbuildinfo
+
+# Alembic/SQLAlchemy autogen scratch, not the artifacts themselves
+*.egg-info/
+
+.env
+!.env.example
+
+# Uvicorn/dev logs from local runs
+*.log
