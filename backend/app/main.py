@@ -4,7 +4,7 @@ from fastapi.responses import JSONResponse
 
 from app.agent.dispatcher import AgentStepLimitExceeded, ProhibitedToolError, ToolInputValidationError, ToolTimeoutError
 from app.agent.orchestrator import AgentRunNotAllowedError
-from app.api import applications, reviews
+from app.api import admin, applications, reviews
 from app.core.config import settings
 from app.core.state_machine import InvalidTransitionError
 from app.ml.scoring import ModelNotTrainedError
@@ -21,6 +21,7 @@ app.add_middleware(
 
 app.include_router(applications.router)
 app.include_router(reviews.router)
+app.include_router(admin.router)
 
 
 @app.get("/health")

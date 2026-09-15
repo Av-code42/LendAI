@@ -33,5 +33,11 @@ class Settings(BaseSettings):
 
     cors_allow_origins: list[str] = ["*"]
 
+    # Required to call POST /admin/bootstrap (see app/api/admin.py) -- a
+    # one-time setup endpoint for environments with no shell access to the
+    # database (e.g. Vercel serverless + a managed Postgres). None means
+    # the endpoint always refuses.
+    admin_bootstrap_token: str | None = None
+
 
 settings = Settings()

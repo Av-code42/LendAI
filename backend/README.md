@@ -69,25 +69,51 @@ the connection string in for you).
    string) -- serverless functions open a fresh connection per
    invocation, and a pooler on the DB side absorbs that far better than
    a raw Postgres connection.
-2. Run migrations and load the dataset against that database from a
-   normal shell (your machine, or this session if it has network access
-   to your DB host) -- these are one-time/one-off operations, not part of
-   the deployed function:
+2. In the Vercel project (Root Directory: `backend`), set two
+   environment variables: `DATABASE_URL` (the connection string above)
+   and `ADMIN_BOOTSTRAP_TOKEN` (any long random string you make up --
+   this protects the one-time setup endpoint below).
+3. Deploy, then create the schema and load the dataset with **one HTTPS
+   call** to the deployed function itself:
+   ```bash
+   curl -X POST "https://<your-deployment>.vercel.app/admin/bootstrap" \
+     -H "X-Admin-Token: <the token you set above>"
+   ```
+   This exists because a serverless deployment (and often your own
+   machine, if it has no `psql`/Docker/direct DB access) has no shell to
+   run `alembic upgrade head` + `scripts/load_data.py` from -- but the
+   *deployed function itself* can always reach its own `DATABASE_URL`,
+   so triggering it over HTTPS sidesteps that entirely. It creates the
+   schema (via `Base.metadata.create_all`, not the Alembic CLI -- there's
+   no shell here to invoke `alembic` from either) and loads all 9 bundle
+   files in one call (took ~5s against a local Postgres in testing; Neon
+   will add some network latency but should stay well within Vercel's
+   function timeout). Safe to call once: a second call without
+   `?reset=true` fails cleanly with 409 (unique-key conflict) rather than
+   duplicating data; pass `?reset=true` if you actually want to wipe and
+   reload. `GET /admin/status` (same header) reports current row counts
+   without changing anything.
+
+   Model training does **not** run here and does **not** need to be
+   re-run against the new database -- `artifacts/models/*.joblib` and
+   their distilled `*_lite.json` siblings (see below) are already
+   committed and loaded as static files; only per-application *feature
+   lookups* at scoring time hit the database.
+
+   Prefer a real shell? The old path still works if you have `psql`,
+   Docker, or a Python environment with `requirements.txt` installed
+   locally:
    ```bash
    DATABASE_URL="<your connection string>" alembic upgrade head
    DATABASE_URL="<your connection string>" python scripts/load_data.py --reset
    ```
-   Model training does **not** need to be re-run against the new
-   database -- `artifacts/models/*.joblib` (and their distilled
-   `*_lite.json` siblings, see below) are already committed and are
-   loaded as static files by the deployed function; only per-application
-   *feature lookups* at scoring time hit the database.
-3. In the Vercel project (Root Directory: `backend`), set the
-   `DATABASE_URL` environment variable to the same connection string.
 4. Set `CORS_ALLOW_ORIGINS` to your frontend's real origin(s) (a JSON
    array, e.g. `["https://your-frontend.vercel.app"]`) once you're ready
    to lock it down -- it defaults to `["*"]`, fine for an initial
    preview deploy.
+5. Once bootstrapped, consider removing/rotating `ADMIN_BOOTSTRAP_TOKEN`
+   -- with no token set, `/admin/bootstrap` and `/admin/status` always
+   refuse every request.
 
 **Why the deployed function's dependencies are so much smaller than
 local/Docker:** the first real deploy attempt hit Vercel's function size
