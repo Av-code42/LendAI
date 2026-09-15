@@ -50,6 +50,57 @@ createdb lendai_test   # once
 pytest tests/ -v
 ```
 
+## Deploying to Vercel
+
+The API deploys to Vercel as a Python serverless function
+(`api/index.py` re-exports the FastAPI `app`; `vercel.json` routes every
+path to it). Vercel serverless has no persistent local disk/Postgres, so
+this needs an external managed Postgres reachable over the network --
+[Neon](https://neon.tech) is the natural choice (free tier, and Vercel
+has a native "Storage -> Neon" integration that provisions one and wires
+the connection string in for you).
+
+**One-time setup, before or right after the first deploy:**
+
+1. Create a Postgres database (Neon via Vercel's Storage tab, or
+   standalone at neon.tech/supabase/etc.). Use the **pooled** connection
+   string if your provider offers one (Neon: the "Pooled connection"
+   string) -- serverless functions open a fresh connection per
+   invocation, and a pooler on the DB side absorbs that far better than
+   a raw Postgres connection.
+2. Run migrations and load the dataset against that database from a
+   normal shell (your machine, or this session if it has network access
+   to your DB host) -- these are one-time/one-off operations, not part of
+   the deployed function:
+   ```bash
+   DATABASE_URL="<your connection string>" alembic upgrade head
+   DATABASE_URL="<your connection string>" python scripts/load_data.py --reset
+   ```
+   Model training does **not** need to be re-run against the new
+   database -- `artifacts/models/*.joblib` are already committed and are
+   loaded as static files by the deployed function; only per-application
+   *feature lookups* at scoring time hit the database.
+3. In the Vercel project (Root Directory: `backend`), set the
+   `DATABASE_URL` environment variable to the same connection string.
+4. Set `CORS_ALLOW_ORIGINS` to your frontend's real origin(s) (a JSON
+   array, e.g. `["https://your-frontend.vercel.app"]`) once you're ready
+   to lock it down -- it defaults to `["*"]`, fine for an initial
+   preview deploy.
+
+**Why the deployed function's dependencies differ from local/Docker:**
+`api/requirements.txt` (used by Vercel; see comments in that file) omits
+`xgboost` and `uvicorn` -- xgboost is only used by the offline training
+script, never imported by request-serving code, and both models
+currently in `artifacts/models/` are Logistic Regression (see
+`training_report.json`), so it isn't needed to serve predictions. This
+keeps the deployment comfortably under Vercel/Lambda's 250MB unzipped
+function size limit. `../requirements.txt` (local dev, Docker, tests)
+is unaffected and keeps the full set.
+
+**If a future retrain picks XGBoost as the winner for either model**,
+add `xgboost` back to `api/requirements.txt` before deploying, or the
+deployed function will fail at import/prediction time for that model.
+
 ## Architecture
 
 ```
