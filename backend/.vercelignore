@@ -1,8 +1,8 @@
-# The bulk historical dataset is only needed once, by scripts/load_data.py,
-# run locally/against the remote DB directly -- not by the deployed API.
-# The two JSON config files (policy + tool schemas) ARE needed at runtime
-# and are not matched by this pattern.
-data/*.csv
+# data/*.csv IS needed at runtime now: POST /admin/bootstrap (see
+# app/api/admin.py) reads them to seed the database over HTTPS, since a
+# serverless deployment + managed Postgres has no shell to run
+# scripts/load_data.py from directly. Kept in the bundle deliberately --
+# do not re-add an exclusion for it.
 
 .venv/
 tests/
