@@ -18,17 +18,18 @@ decision-maker and never writes to the database directly.
 
 - `frontend/` — the customer-facing loan application flow and the
   underwriter human-review console (React + TypeScript + Vite +
-  Tailwind), currently backed by an in-browser mock API layer. See
-  `frontend/README.md`.
+  Tailwind), talking to the real backend. See `frontend/README.md`.
 - `backend/` — Python/FastAPI backend: Postgres schema + data loader for
   the real 10,000-row dataset bundle, the state machine, the policy
   engine (validated 10,000/10,000 against ground truth), trained credit
   and fraud ML models (Logistic Regression / Random Forest / XGBoost
-  compared), the deterministic decision router (validated 99.3% against
-  ground truth), the agent tool/permission layer, and the full REST API.
-  See `backend/README.md` for setup, architecture, and known limitations.
-- Frontend↔backend wiring, real OCR, real device/fraud signal capture,
-  auth/RBAC, and an actual LLM in the agent loop are not yet built.
+  compared, distilled to a dependency-free pure-Python scorer for
+  deployment), the deterministic decision router (validated 99.3% against
+  ground truth), the agent tool/permission layer, and the full REST API,
+  deployed and bootstrapped against a live Postgres (Neon). See
+  `backend/README.md` for setup, architecture, and known limitations.
+- Real OCR, real device/fraud signal capture, auth/RBAC, and an actual
+  LLM in the agent loop are not yet built.
 
 ## Recommended build order
 
@@ -43,8 +44,9 @@ decision-maker and never writes to the database directly.
 9. ~~Add audit/event logging.~~ ✅
 10. ~~Add mock offer/agreement/disbursal.~~ ✅
 11. ~~Run golden and adversarial test cases.~~ ✅ (`backend/tests/`)
+12. ~~Wire the frontend to the real backend.~~ ✅ (`frontend/src/api/mappers.ts` is the seam)
+13. ~~Deploy both to Vercel, backend bootstrapped against a live Postgres.~~ ✅
 
-**Next up:** wire the frontend to the real backend (currently the
-frontend runs its own mock API layer independently); swap the
-deterministic agent orchestrator for a real LLM-driven one against the
-same tool contract and guardrails.
+**Next up:** swap the deterministic agent orchestrator for a real
+LLM-driven one against the same tool contract and guardrails; real
+OCR/device-fraud-signal integrations; auth/RBAC.

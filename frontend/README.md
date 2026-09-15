@@ -1,12 +1,9 @@
 # LendAI Frontend
 
 Customer loan-application flow and underwriter human-review console for
-the LendAI MVP, built against the API surface defined in the PRD. The
-real backend doesn't exist yet, so this app runs against a **mock API
-layer** ([MSW](https://mswjs.io)) that implements the same REST contract
-in-browser (`src/mocks/handlers.ts`) — swapping in the real backend later
-should not require changing any component code, only removing the mock
-worker bootstrap in `src/main.tsx`.
+the LendAI MVP, talking to the real backend (`../backend`) — a Python/
+FastAPI service backed by Postgres, running against the actual 10,000-row
+synthetic dataset. This app no longer runs a mock API layer.
 
 ## Stack
 
@@ -15,8 +12,6 @@ worker bootstrap in `src/main.tsx`.
 - React Router for routing between the customer and underwriter surfaces
 - TanStack Query for data fetching/caching/mutations
 - React Hook Form + Zod for form validation
-- MSW for the mock API layer, seeded with data shaped to match
-  `dataset_summary.json` and the PRD's 8 golden test cases
 
 ## Getting started
 
@@ -25,9 +20,17 @@ npm install
 npm run dev
 ```
 
-Then open the printed local URL. It redirects to `/customer` — use the
-Customer/Underwriter switcher in the top nav to jump to the review
-console at `/review`.
+By default this points at the deployed backend
+(`https://lendaibackend-three.vercel.app`). To point at a locally-running
+backend instead, create `.env.local`:
+
+```bash
+echo "VITE_API_BASE_URL=http://localhost:8000" > .env.local
+```
+
+(see `../backend/README.md` to run that locally). Then open the printed
+local URL — it redirects to `/customer`; use the Customer/Underwriter
+switcher in the top nav to jump to the review console at `/review`.
 
 ```bash
 npm run build     # type-check + production build
@@ -39,7 +42,10 @@ npm run lint      # type-check only
 
 **Customer flow** (`src/features/customer`):
 - Application dashboard (list + status)
-- New application form
+- New application form — collects the applicant fields the real policy/
+  credit engine actually needs (age, bureau score, employment tenure,
+  banking relationship tenure, active loans, existing EMI), not just the
+  loan amount/purpose
 - Application detail page: state-machine stepper, document upload,
   running evidence collection ("agent run"), credit/fraud scores, policy
   rule breakdown, offer acceptance, e-agreement signature, mock disbursal,
@@ -52,22 +58,45 @@ npm run lint      # type-check only
   REJECT / REQUEST_INFORMATION / MODIFY_OFFER / ESCALATE) with mandatory
   reason code + comment
 
-## Mock data & API
+## The backend integration seam
 
-`src/mocks/seed/data.ts` seeds ~14 applications, including all 8 PRD
-golden cases (clean auto-approve, high/medium fraud, policy failure, high
-credit risk, missing document, low OCR confidence, blocked agent action)
-so every application state is reachable without manually driving an
-application through the whole pipeline. `src/mocks/store.ts` is an
-in-memory mock "backend" — it owns the decision/routing logic so the UI
-layer never computes an approve/decline decision itself, consistent with
-the PRD's core rule. State resets on page reload by design.
+`src/api/client.ts` is the only file that calls `fetch` directly (base
+URL from `VITE_API_BASE_URL`, see above). `src/api/mappers.ts` translates
+the backend's actual snake_case JSON (see
+`../backend/app/schemas/api.py`) into this frontend's existing camelCase
+domain types (`src/types/domain.ts`) — every screen/component is written
+against those types and doesn't know or care that the wire format
+differs. A few real shape differences the mappers absorb rather than
+components handling directly:
+- Backend document status is always `"UPLOADED"` (no rich pipeline
+  states) — "needs re-upload" is synthesized from `ocr_confidence` being
+  below the backend's own floor, the actual signal it uses internally.
+- Historical (bulk-imported) customers have no PII by design (the PRD's
+  PII-minimisation guardrail) — null `full_name`/`email`/`phone` get
+  friendly placeholders instead of blanks.
+- `agentRecommendation` isn't a field on the backend's Application at all
+  (only reconstructable from the agent event log) — left undefined;
+  every component reading it already handles that gracefully.
 
-`src/api/client.ts` + `src/api/queries.ts` are the seam where a real
-backend plugs in — no other file talks to `fetch` directly.
+Document types were also corrected to match the real dataset/backend
+(`PAN` / `SALARY_SLIP` / `BANK_STATEMENT`) — the original mock had
+guessed at `PAN_CARD` / `AADHAAR` / `SELFIE` before the real backend
+existed.
+
+## A bug the real backend integration surfaced
+
+`TextInput`/`Select` (`src/components/ui/Field.tsx`) weren't wrapped in
+`React.forwardRef`, so React silently dropped the `ref` react-hook-form's
+`register()` needs to read a field's value at submit time — every
+registered field would read as empty/`NaN` on submit regardless of what
+was visibly typed. This had been latent since the form was first built
+(the mock-era testing never drove a real submit through Playwright); it's
+fixed now and both components are `forwardRef`-wrapped.
 
 ## Not yet built
 
-Backend, database, real ML/fraud models, real document OCR pipeline, and
-auth/RBAC. The role switcher in the top nav is a demo convenience, not
-real authentication.
+Real device/geolocation fraud signals (the backend approximates them at
+the customer level for live applications — see
+`../backend/app/ml/fraud_feature_builder.py`), real OCR/document
+verification, and auth/RBAC. The role switcher in the top nav is a demo
+convenience, not real authentication.

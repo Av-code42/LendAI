@@ -14,6 +14,12 @@ const schema = z.object({
   email: z.string().email("Enter a valid email"),
   phone: z.string().min(10, "Enter a valid phone number"),
   monthlyIncome: z.coerce.number().positive("Enter your monthly income"),
+  age: z.coerce.number().int().min(18, "Must be 18 or older").max(100),
+  bureauScore: z.coerce.number().int().min(300, "Bureau scores range 300-900").max(900),
+  employmentTenureMonths: z.coerce.number().int().min(0, "Enter months, not years"),
+  relationshipMonths: z.coerce.number().int().min(0, "Enter months, not years"),
+  activeLoans: z.coerce.number().int().min(0).default(0),
+  existingMonthlyEmi: z.coerce.number().min(0).default(0),
   requestedAmount: z.coerce.number().positive("Enter an amount"),
   tenureMonths: z.coerce.number().int().min(6).max(60),
   purpose: z.string().min(3, "Tell us what the loan is for"),
@@ -33,7 +39,7 @@ export function NewApplicationPage() {
     formState: { errors },
   } = useForm<FormValues>({
     resolver: zodResolver(schema),
-    defaultValues: { tenureMonths: 24, purpose: "" },
+    defaultValues: { tenureMonths: 24, purpose: "", activeLoans: 0, existingMonthlyEmi: 0 },
   });
 
   const income = Number(watch("monthlyIncome")) || 0;
@@ -70,6 +76,18 @@ export function NewApplicationPage() {
             <FieldWrapper label="Phone" htmlFor="phone" error={errors.phone?.message}>
               <TextInput id="phone" placeholder="+91 90000 00000" {...register("phone")} error={!!errors.phone} />
             </FieldWrapper>
+            <FieldWrapper label="Age" htmlFor="age" error={errors.age?.message}>
+              <TextInput id="age" type="number" placeholder="32" {...register("age")} error={!!errors.age} />
+            </FieldWrapper>
+          </CardBody>
+        </Card>
+
+        <Card className="mt-4">
+          <CardHeader
+            title="Eligibility details"
+            subtitle="Used by the policy and credit-risk engines — see PL_2026_V1 for the exact thresholds."
+          />
+          <CardBody className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <FieldWrapper label="Monthly income (₹)" htmlFor="monthlyIncome" error={errors.monthlyIncome?.message}>
               <TextInput
                 id="monthlyIncome"
@@ -77,6 +95,59 @@ export function NewApplicationPage() {
                 placeholder="75000"
                 {...register("monthlyIncome")}
                 error={!!errors.monthlyIncome}
+              />
+            </FieldWrapper>
+            <FieldWrapper
+              label="Bureau (credit) score"
+              htmlFor="bureauScore"
+              error={errors.bureauScore?.message}
+              hint={`Policy requires ≥ ${POLICY_THRESHOLDS.minBureauScore}.`}
+            >
+              <TextInput id="bureauScore" type="number" placeholder="750" {...register("bureauScore")} error={!!errors.bureauScore} />
+            </FieldWrapper>
+            <FieldWrapper
+              label="Employment tenure (months)"
+              htmlFor="employmentTenureMonths"
+              error={errors.employmentTenureMonths?.message}
+              hint={`Policy requires ≥ ${POLICY_THRESHOLDS.minEmploymentTenureMonths}.`}
+            >
+              <TextInput
+                id="employmentTenureMonths"
+                type="number"
+                placeholder="36"
+                {...register("employmentTenureMonths")}
+                error={!!errors.employmentTenureMonths}
+              />
+            </FieldWrapper>
+            <FieldWrapper
+              label="Months banking with us"
+              htmlFor="relationshipMonths"
+              error={errors.relationshipMonths?.message}
+              hint="This product is for existing customers."
+            >
+              <TextInput
+                id="relationshipMonths"
+                type="number"
+                placeholder="48"
+                {...register("relationshipMonths")}
+                error={!!errors.relationshipMonths}
+              />
+            </FieldWrapper>
+            <FieldWrapper label="Active loans" htmlFor="activeLoans" error={errors.activeLoans?.message}>
+              <TextInput id="activeLoans" type="number" placeholder="0" {...register("activeLoans")} error={!!errors.activeLoans} />
+            </FieldWrapper>
+            <FieldWrapper
+              label="Existing monthly EMI (₹)"
+              htmlFor="existingMonthlyEmi"
+              error={errors.existingMonthlyEmi?.message}
+              hint="Other loans' combined monthly payment, if any."
+            >
+              <TextInput
+                id="existingMonthlyEmi"
+                type="number"
+                placeholder="0"
+                {...register("existingMonthlyEmi")}
+                error={!!errors.existingMonthlyEmi}
               />
             </FieldWrapper>
           </CardBody>

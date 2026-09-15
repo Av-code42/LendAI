@@ -1,11 +1,13 @@
 /**
  * Thin typed fetch wrapper. Every screen goes through here rather than
- * calling `fetch` directly, so swapping the mock worker for a real backend
- * later is a one-file change (and a good seam for auth headers, tracing,
- * etc. once they exist).
+ * calling `fetch` directly.
+ *
+ * Points at the real LendAI backend (see ../../backend). Override with
+ * VITE_API_BASE_URL (e.g. in a local .env) to point at a locally-running
+ * backend instead of the deployed one.
  */
 
-const BASE_URL = "/api";
+const BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "https://lendaibackend-three.vercel.app";
 
 class ApiError extends Error {
   status: number;
@@ -14,6 +16,23 @@ class ApiError extends Error {
     this.status = status;
     this.name = "ApiError";
   }
+}
+
+function extractErrorMessage(body: unknown, fallback: string): string {
+  if (body && typeof body === "object") {
+    const b = body as Record<string, unknown>;
+    // FastAPI's HTTPException responses use "detail" (string, or a list of
+    // Pydantic validation error objects for 422s); this API's own custom
+    // exception handlers use "message".
+    if (typeof b.message === "string") return b.message;
+    if (typeof b.detail === "string") return b.detail;
+    if (Array.isArray(b.detail)) {
+      return b.detail
+        .map((d) => (d && typeof d === "object" && "msg" in d ? String((d as { msg: unknown }).msg) : String(d)))
+        .join("; ");
+    }
+  }
+  return fallback;
 }
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
@@ -28,7 +47,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     let message = res.statusText;
     try {
       const body = await res.json();
-      message = body.message ?? message;
+      message = extractErrorMessage(body, message);
     } catch {
       // ignore parse failure, fall back to statusText
     }

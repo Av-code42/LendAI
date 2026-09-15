@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/Button";
 import { titleCase } from "@/lib/format";
 import type { DocumentRecord, DocumentType } from "@/types/domain";
 
-const REQUIRED_DOCS: DocumentType[] = ["PAN_CARD", "AADHAAR", "SALARY_SLIP", "BANK_STATEMENT"];
+const REQUIRED_DOCS: DocumentType[] = ["PAN", "SALARY_SLIP", "BANK_STATEMENT"];
 
 export function DocumentUploader({
   applicationId,
