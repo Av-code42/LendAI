@@ -1,0 +1,24 @@
+# Slim, RUNTIME-ONLY dependency set for the Vercel serverless deployment.
+# Vercel's Python builder prefers a requirements.txt next to the function
+# entrypoint over the project-root one, so this intentionally overrides
+# ../requirements.txt for the deployed function -- local dev/Docker/tests
+# keep using the full ../requirements.txt (training, tests, uvicorn).
+#
+# xgboost is deliberately excluded: it is only used by app/ml/train.py
+# (never imported by the request-serving code path), and both the credit
+# and fraud models currently ship as LOGISTIC_REGRESSION (see
+# artifacts/models/training_report.json) -- so it isn't needed to serve
+# predictions, and leaving it out keeps the deployment well under
+# Vercel/Lambda's 250MB unzipped function size limit. If a future
+# retrain picks XGBoost as the winner, add xgboost back here before
+# deploying.
+fastapi==0.115.0
+sqlalchemy==2.0.35
+psycopg2-binary==2.9.9
+pydantic==2.9.2
+pydantic-settings==2.5.2
+python-multipart==0.0.9
+
+pandas==2.2.3
+scikit-learn==1.5.2
+joblib==1.4.2

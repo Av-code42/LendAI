@@ -1,0 +1,13 @@
+# The bulk historical dataset is only needed once, by scripts/load_data.py,
+# run locally/against the remote DB directly -- not by the deployed API.
+# The two JSON config files (policy + tool schemas) ARE needed at runtime
+# and are not matched by this pattern.
+data/*.csv
+
+.venv/
+tests/
+scripts/
+alembic/
+__pycache__/
+.pytest_cache/
+*.log
