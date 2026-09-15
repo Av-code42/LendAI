@@ -22,7 +22,7 @@ export function DocumentUploader({
 
   const handleFile = (type: DocumentType, file: File | undefined) => {
     if (!file) return;
-    upload.mutate({ applicationId, type, fileName: file.name });
+    upload.mutate({ applicationId, type, file });
   };
 
   return (
@@ -44,6 +44,7 @@ export function DocumentUploader({
               <input
                 ref={(el) => (inputRefs.current[type] = el)}
                 type="file"
+                accept="image/jpeg,image/png,image/tiff,application/pdf"
                 className="hidden"
                 onChange={(e) => handleFile(type, e.target.files?.[0])}
               />

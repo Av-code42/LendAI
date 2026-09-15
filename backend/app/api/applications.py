@@ -2,13 +2,13 @@ from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
 from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 
 from app.agent.orchestrator import AgentRunNotAllowedError, run_agent
 from app.core.audit import log_audit
-from app.core.document_pipeline import simulate_document_processing
+from app.core.document_pipeline import process_document
 from app.core.state_machine import InvalidTransitionError, require_transition
 from app.db import models as m
 from app.db.base import get_db
@@ -19,7 +19,6 @@ from app.schemas.api import (
     ApplicationCreate,
     ApplicationOut,
     ApplicationPatch,
-    DocumentCreate,
     DocumentOut,
     ModelOutputOut,
     OfferOut,
@@ -164,23 +163,39 @@ def list_documents(application_id: str, db: Session = Depends(get_db)):
 
 
 @router.post("/{application_id}/documents", response_model=DocumentOut, status_code=201)
-def upload_document(application_id: str, payload: DocumentCreate, db: Session = Depends(get_db)):
+async def upload_document(
+    application_id: str,
+    document_type: str = Form(...),
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+):
     app = _app_with_relations(db, application_id)
-    result = simulate_document_processing(application_id, payload.document_type, payload.file_name)
+    file_bytes = await file.read()
+    result = process_document(
+        application_id,
+        document_type,
+        file.filename or "document",
+        declared_name=app.customer.full_name or "",
+        declared_monthly_income=app.customer.monthly_income,
+        file_bytes=file_bytes,
+        content_type=file.content_type,
+    )
     doc = m.Document(
         application_id=application_id,
-        document_type=payload.document_type,
+        document_type=document_type,
         status=result["status"],
         ocr_confidence=result["ocr_confidence"],
         income_mismatch_ratio=result["income_mismatch_ratio"],
         name_match=result["name_match"],
-        file_name=payload.file_name,
+        file_name=file.filename,
+        file_url=result["file_url"],
+        extracted_fields=result["extracted_fields"],
     )
     db.add(doc)
     if app.status == m.ApplicationStatus.SUBMITTED.value:
         require_transition(app.status, m.ApplicationStatus.DATA_COLLECTION.value)
         app.status = m.ApplicationStatus.DATA_COLLECTION.value
-    log_audit(db, application_id, app.customer.full_name or "customer", "DOCUMENT_UPLOADED", f"Uploaded {payload.document_type}.")
+    log_audit(db, application_id, app.customer.full_name or "customer", "DOCUMENT_UPLOADED", f"Uploaded {document_type}.")
     db.commit()
     db.refresh(doc)
     return doc

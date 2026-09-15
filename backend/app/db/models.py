@@ -154,6 +154,13 @@ class Document(Base):
     income_mismatch_ratio: Mapped[float | None] = mapped_column(Float, nullable=True)
     name_match: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
     file_name: Mapped[str | None] = mapped_column(String, nullable=True)
+    # Vercel Blob URL of the actual uploaded file, and whatever fields
+    # Textract extracted from it (see app/services/document_extraction.py).
+    # Both NULL for historical/bulk-imported documents (no real file ever
+    # existed for those) and for live uploads processed by the simulated
+    # fallback pipeline (no cloud credentials configured).
+    file_url: Mapped[str | None] = mapped_column(String, nullable=True)
+    extracted_fields: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     uploaded_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     application: Mapped[Application] = relationship(back_populates="documents")

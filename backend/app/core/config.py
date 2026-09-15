@@ -39,5 +39,14 @@ class Settings(BaseSettings):
     # the endpoint always refuses.
     admin_bootstrap_token: str | None = None
 
+    # Real document pipeline (Vercel Blob storage + AWS Textract OCR).
+    # All optional -- when any is missing, app/core/document_pipeline.py
+    # falls back to the old deterministic simulation instead of erroring,
+    # so local dev/tests never need real cloud accounts.
+    blob_read_write_token: str | None = None
+    aws_access_key_id: str | None = None
+    aws_secret_access_key: str | None = None
+    aws_region: str = "ap-south-1"
+
 
 settings = Settings()

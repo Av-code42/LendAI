@@ -96,18 +96,17 @@ export function useUploadDocument() {
     mutationFn: async ({
       applicationId,
       type,
-      fileName,
+      file,
     }: {
       applicationId: string;
       type: DocumentType;
-      fileName: string;
-    }) =>
-      mapDocument(
-        await api.post<any>(`/applications/${applicationId}/documents`, {
-          document_type: type,
-          file_name: fileName,
-        })
-      ),
+      file: File;
+    }) => {
+      const form = new FormData();
+      form.append("document_type", type);
+      form.append("file", file);
+      return mapDocument(await api.postForm<any>(`/applications/${applicationId}/documents`, form));
+    },
     onSuccess: (_doc, vars) => {
       qc.invalidateQueries({ queryKey: qk.application(vars.applicationId) });
     },

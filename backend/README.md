@@ -207,12 +207,51 @@ without changing anything about the guardrails above, since those live in
 the dispatcher/state machine/router, not in whoever is calling the tools.
 Swapping in a real LLM loop is the natural next milestone.
 
-### The document pipeline is a placeholder
+### The document pipeline: real storage + OCR, with a deterministic fallback
 
-`app/core/document_pipeline.py` deterministically derives a plausible OCR
-confidence from a hash of the inputs -- there's no real OCR/security-scan
-integration. It's isolated to one function specifically so a real
-provider is a one-file change later.
+`app/core/document_pipeline.py` uploads the file to **Vercel Blob** and
+runs **AWS Textract** (`AnalyzeDocument`, FORMS+TABLES) to extract fields
+whenever both are configured (see env vars below) -- `app/integrations/`
+calls both over plain signed HTTPS (no `boto3`, no Vercel Blob Python SDK;
+a Python SDK for the latter doesn't exist, and `boto3` alone would bring
+back the bundle-size problem the ML distillation above was built to
+avoid). `app/services/document_extraction.py` turns Textract's raw
+key/value blocks into a name, an income figure (salary slips), and a PAN
+number regex-matched from the raw text -- necessarily heuristic, since
+Textract's FORMS feature has no idea what a "PAN card" is, and AWS's
+purpose-built identity-document API (`AnalyzeID`) doesn't support Indian
+PAN cards at all (only US driver's licenses/passports), so everything
+uses the generic FORMS path.
+
+If either credential set is missing, or the real pipeline raises for any
+reason (network hiccup, unsupported file type, malformed Textract
+response), `process_document` falls back to the original deterministic
+hash-based simulation -- so local dev/tests never need real cloud
+accounts, and a live deployment degrades instead of failing the upload
+outright. There's still no malware/content security scan of uploaded
+files -- noted here rather than silently absent.
+
+**Env vars for the real pipeline** (all optional -- omit any of them and
+uploads keep working via the simulated fallback):
+
+| Var | Where to get it |
+|---|---|
+| `BLOB_READ_WRITE_TOKEN` | Vercel project -> Storage -> Blob -> create a store; it injects this automatically for functions in the same project. |
+| `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY` | An IAM user/role scoped to `textract:AnalyzeDocument` only. |
+| `AWS_REGION` | Defaults to `ap-south-1`; set to whichever region Textract is enabled in for your account. |
+
+**If you bootstrapped a database before this feature existed**, the two
+new `documents` columns (`file_url`, `extracted_fields`) won't appear from
+`Base.metadata.create_all` alone -- it only creates missing tables, never
+alters existing ones. Patch them in with the same one-HTTPS-call pattern
+as the initial bootstrap:
+```bash
+curl -X POST "https://<your-deployment>.vercel.app/admin/migrate" \
+  -H "X-Admin-Token: <your ADMIN_BOOTSTRAP_TOKEN>"
+```
+Safe to call repeatedly (`ADD COLUMN IF NOT EXISTS`). A fresh database
+gets these columns from `create_all` on its first `/admin/bootstrap` call
+and never needs this.
 
 ### The mock backend seam for the frontend
 
@@ -294,8 +333,10 @@ POST           /applications/{id}/disbursal            (mock only)
 
 ## What's NOT built yet
 
-Real OCR/document verification, real device/geolocation fraud signals
-(current fraud features approximate device reuse/velocity at the
-customer level, not device/IP level -- see
+Malware/content security scanning of uploaded documents, real
+device/geolocation fraud signals (current fraud features approximate
+device reuse/velocity at the customer level, not device/IP level -- see
 `app/ml/fraud_feature_builder.py`), auth/RBAC, an actual LLM in the agent
-loop, and frontend↔backend wiring.
+loop, and multi-page document support (Textract's synchronous
+`AnalyzeDocument` API used here is single-page only -- see
+`app/integrations/textract.py`).

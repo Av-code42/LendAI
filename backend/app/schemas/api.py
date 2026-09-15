@@ -76,12 +76,9 @@ class DocumentOut(ORMModel):
     income_mismatch_ratio: float | None
     name_match: bool | None
     file_name: str | None
+    file_url: str | None
+    extracted_fields: dict | None
     uploaded_at: datetime
-
-
-class DocumentCreate(BaseModel):
-    document_type: str
-    file_name: str = "document.pdf"
 
 
 class OfferOut(ORMModel):

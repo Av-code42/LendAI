@@ -24,6 +24,7 @@ head` first so Alembic knows it's already current.
 from __future__ import annotations
 
 from fastapi import APIRouter, Header, HTTPException
+from sqlalchemy import text
 from sqlalchemy.exc import IntegrityError
 
 from app.core.config import settings
@@ -62,6 +63,27 @@ def bootstrap(reset: bool = False, x_admin_token: str | None = Header(default=No
         ) from exc
 
     return {"status": "ok", "counts": counts, "log": logs}
+
+
+@router.post("/migrate")
+def migrate(x_admin_token: str | None = Header(default=None)):
+    """Patches columns onto tables that already existed before this
+    release (create_all only creates missing tables, it never alters
+    existing ones -- see the module docstring). Each statement uses
+    IF NOT EXISTS so re-running this is always safe."""
+    _require_token(x_admin_token)
+
+    statements = [
+        "ALTER TABLE documents ADD COLUMN IF NOT EXISTS file_url VARCHAR",
+        "ALTER TABLE documents ADD COLUMN IF NOT EXISTS extracted_fields JSON",
+    ]
+    logs: list[str] = []
+    with engine.begin() as conn:
+        for stmt in statements:
+            conn.execute(text(stmt))
+            logs.append(stmt)
+
+    return {"status": "ok", "log": logs}
 
 
 @router.get("/status")
