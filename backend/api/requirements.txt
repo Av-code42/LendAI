@@ -4,21 +4,23 @@
 # ../requirements.txt for the deployed function -- local dev/Docker/tests
 # keep using the full ../requirements.txt (training, tests, uvicorn).
 #
-# xgboost is deliberately excluded: it is only used by app/ml/train.py
-# (never imported by the request-serving code path), and both the credit
-# and fraud models currently ship as LOGISTIC_REGRESSION (see
-# artifacts/models/training_report.json) -- so it isn't needed to serve
-# predictions, and leaving it out keeps the deployment well under
-# Vercel/Lambda's 250MB unzipped function size limit. If a future
-# retrain picks XGBoost as the winner, add xgboost back here before
-# deploying.
+# pandas / scikit-learn / scipy / numpy / xgboost / joblib are ALL
+# deliberately excluded. Scoring uses app/ml/lite.py, a pure-Python
+# reimplementation of the trained (Logistic Regression) pipelines'
+# predict_proba -- validated to match the real scikit-learn pipeline to
+# floating-point-epsilon precision across every application in the
+# database (scripts/export_lite_models.py). None of those heavy libraries
+# are imported by the request-serving code path at all anymore.
+#
+# If a future retrain picks a non-Logistic-Regression winner for either
+# model, export_lite_models.py will refuse to export a (necessarily
+# wrong) lite spec for it, and app/ml/scoring.py falls back to the full
+# joblib+scikit-learn path for that model -- which this slim requirements
+# file does NOT provide. In that case, add scikit-learn/joblib/pandas
+# (and xgboost, if that's the winner) back here before deploying.
 fastapi==0.115.0
 sqlalchemy==2.0.35
 psycopg2-binary==2.9.9
 pydantic==2.9.2
 pydantic-settings==2.5.2
 python-multipart==0.0.9
-
-pandas==2.2.3
-scikit-learn==1.5.2
-joblib==1.4.2
