@@ -28,6 +28,7 @@ services:
       sh -c "alembic upgrade head &&
              python scripts/load_data.py &&
              python -m app.ml.train &&
+             python scripts/export_lite_models.py &&
              uvicorn app.main:app --host 0.0.0.0 --port 8000"
 
 volumes:

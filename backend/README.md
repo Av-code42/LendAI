@@ -36,6 +36,7 @@ cp .env.example .env   # adjust DATABASE_URL if needed
 alembic upgrade head
 python scripts/load_data.py --reset   # loads the 9 bundle files
 python -m app.ml.train                # trains + saves credit/fraud models
+python scripts/export_lite_models.py  # distills + validates the pure-Python scorer
 
 uvicorn app.main:app --reload
 ```
@@ -77,7 +78,8 @@ the connection string in for you).
    DATABASE_URL="<your connection string>" python scripts/load_data.py --reset
    ```
    Model training does **not** need to be re-run against the new
-   database -- `artifacts/models/*.joblib` are already committed and are
+   database -- `artifacts/models/*.joblib` (and their distilled
+   `*_lite.json` siblings, see below) are already committed and are
    loaded as static files by the deployed function; only per-application
    *feature lookups* at scoring time hit the database.
 3. In the Vercel project (Root Directory: `backend`), set the
@@ -87,19 +89,41 @@ the connection string in for you).
    to lock it down -- it defaults to `["*"]`, fine for an initial
    preview deploy.
 
-**Why the deployed function's dependencies differ from local/Docker:**
-`api/requirements.txt` (used by Vercel; see comments in that file) omits
-`xgboost` and `uvicorn` -- xgboost is only used by the offline training
-script, never imported by request-serving code, and both models
-currently in `artifacts/models/` are Logistic Regression (see
-`training_report.json`), so it isn't needed to serve predictions. This
-keeps the deployment comfortably under Vercel/Lambda's 250MB unzipped
-function size limit. `../requirements.txt` (local dev, Docker, tests)
-is unaffected and keeps the full set.
+**Why the deployed function's dependencies are so much smaller than
+local/Docker:** the first real deploy attempt hit Vercel's function size
+limit head-on -- the full `requirements.txt` (with xgboost, scikit-learn,
+scipy, pandas, numpy) came to just over **1 GB**, well past the 500 MB
+cap. Removing xgboost alone (only used by the offline training script)
+wasn't enough of a margin to trust -- scikit-learn + scipy + pandas +
+numpy alone still measured ~**410 MB** installed.
 
-**If a future retrain picks XGBoost as the winner for either model**,
-add `xgboost` back to `api/requirements.txt` before deploying, or the
-deployed function will fail at import/prediction time for that model.
+So scoring doesn't use scikit-learn at request time at all anymore.
+`app/ml/lite.py` is a from-scratch, pure-Python reimplementation of a
+scikit-learn `Pipeline(StandardScaler + OneHotEncoder, LogisticRegression)`
+predict -- linear regression is exactly a dot product plus a sigmoid, and
+`scripts/export_lite_models.py` distills the trained joblib pipeline's
+fitted coefficients into a small JSON spec (`artifacts/models/
+{credit,fraud}_model_lite.json`) that `app/ml/lite.py` scores with only
+the standard library. Before trusting it, that export script validates
+the lite scorer against the real sklearn pipeline **on every application
+in the database** and refuses to write the spec if they don't match to
+high precision -- the actual run validated all 10,001 applications for
+both models, max difference **4.44e-16** (credit) and **1.05e-14**
+(fraud), i.e. floating-point noise, not approximation. `app/ml/scoring.py`
+prefers the lite spec whenever one exists and only imports
+joblib/scikit-learn (lazily) as a fallback.
+
+The result: `api/requirements.txt` needs only FastAPI, SQLAlchemy,
+psycopg2, and Pydantic -- **~47 MB installed**, measured directly (vs.
+the ~410-1000+ MB above). `../requirements.txt` (local dev, Docker,
+tests) is unaffected and keeps the full training stack.
+
+**If a future retrain picks a tree-based model (Random Forest/XGBoost)
+as the winner for either target**, `export_lite_models.py` will detect
+that and skip the lite export for that model, and `scoring.py` falls
+back to the full joblib+scikit-learn path -- which needs those
+dependencies added back to `api/requirements.txt` before deploying, or
+the deployed function will fail at prediction time for that model.
 
 ## Architecture
 
